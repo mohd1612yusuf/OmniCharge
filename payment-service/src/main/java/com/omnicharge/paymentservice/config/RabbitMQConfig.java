@@ -26,6 +26,12 @@ public class RabbitMQConfig {
     @Value("${rabbitmq.notification-routing}")
     private String notificationRoutingKey;
 
+    @Value("${rabbitmq.recharge-update-queue}")
+    private String rechargeUpdateQueue;
+
+    @Value("${rabbitmq.recharge-update-routing}")
+    private String rechargeUpdateRoutingKey;
+
     @Bean
     public Queue paymentQueue() {
         return new Queue(paymentQueue);
@@ -34,6 +40,11 @@ public class RabbitMQConfig {
     @Bean
     public Queue notificationQueue() {
         return new Queue(notificationQueue);
+    }
+
+    @Bean
+    public Queue rechargeUpdateQueue() {
+        return new Queue(rechargeUpdateQueue);
     }
 
     @Bean
@@ -49,6 +60,11 @@ public class RabbitMQConfig {
     @Bean
     public Binding notificationBinding(@Qualifier("notificationQueue") Queue notificationQueue, DirectExchange exchange) {
         return BindingBuilder.bind(notificationQueue).to(exchange).with(notificationRoutingKey);
+    }
+
+    @Bean
+    public Binding rechargeUpdateBinding(@Qualifier("rechargeUpdateQueue") Queue rechargeUpdateQueue, DirectExchange exchange) {
+        return BindingBuilder.bind(rechargeUpdateQueue).to(exchange).with(rechargeUpdateRoutingKey);
     }
 
     @Bean

@@ -7,6 +7,7 @@ import com.omnicharge.rechargeservice.service.RechargeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -22,7 +23,7 @@ public class RechargeController {
 
     @PostMapping("/initiate")
     public ResponseEntity<RechargeRecord> initiateRecharge(@RequestHeader(value = "loggedInUser", required = false) String username,
-                                                           @RequestBody RechargeRequest request) {
+                                                           @Valid @RequestBody RechargeRequest request) {
         Long mockUserId = 1L; // Mock mapping username to ID for simplicity
         RechargeRecord record = rechargeService.initiateRecharge(mockUserId, request);
         return ResponseEntity.ok(record);

@@ -1,14 +1,8 @@
 package com.omnicharge.userservice.controller;
 
-import com.omnicharge.userservice.model.User;
-import com.omnicharge.userservice.payload.request.LoginRequest;
-import com.omnicharge.userservice.payload.request.SignupRequest;
-import com.omnicharge.userservice.payload.response.JwtResponse;
-import com.omnicharge.userservice.payload.response.MessageResponse;
-import com.omnicharge.userservice.repository.UserRepository;
-import com.omnicharge.userservice.security.jwt.JwtUtils;
-import com.omnicharge.userservice.security.services.UserDetailsImpl;
-import jakarta.validation.Valid;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -17,10 +11,22 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import com.omnicharge.userservice.model.User;
+import com.omnicharge.userservice.payload.request.LoginRequest;
+import com.omnicharge.userservice.payload.request.SignupRequest;
+import com.omnicharge.userservice.payload.response.JwtResponse;
+import com.omnicharge.userservice.payload.response.MessageResponse;
+import com.omnicharge.userservice.repository.UserRepository;
+import com.omnicharge.userservice.security.jwt.JwtUtils;
+import com.omnicharge.userservice.security.services.UserDetailsImpl;
+
+import jakarta.validation.Valid;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -76,15 +82,18 @@ public class AuthController {
                 signUpRequest.getEmail(),
                 encoder.encode(signUpRequest.getPassword()));
 
-        String role = signUpRequest.getRole();
-        if (role != null) {
-            user.setRole(role);
-        } else {
+        String requestedRole = signUpRequest.getRole();
+        if (requestedRole == null || requestedRole.isBlank()) {
             user.setRole("ROLE_USER");
+        } else if (requestedRole.equals("ROLE_ADMIN") || requestedRole.equals("ROLE_USER")) {
+            user.setRole(requestedRole);
+        } else {
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse("Error: Invalid role. Allowed values: ROLE_USER, ROLE_ADMIN"));
         }
 
         userRepository.save(user);
 
-        return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+        return ResponseEntity.ok(new MessageResponse("User registered successfully! Role: " + user.getRole()));
     }
 }

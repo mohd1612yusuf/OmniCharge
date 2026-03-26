@@ -1,6 +1,7 @@
 package com.omnicharge.paymentservice.dto;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 public class RechargeEvent {
     private Long transactionId;
@@ -8,6 +9,7 @@ public class RechargeEvent {
     private String mobileNumber;
     private BigDecimal amount;
     private String status;
+    private LocalDateTime transactionDate;
 
     public RechargeEvent() {}
 
@@ -29,4 +31,6 @@ public class RechargeEvent {
     public void setAmount(BigDecimal amount) { this.amount = amount; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public LocalDateTime getTransactionDate() { return transactionDate; }
+    public void setTransactionDate(LocalDateTime transactionDate) { this.transactionDate = transactionDate; }
 }

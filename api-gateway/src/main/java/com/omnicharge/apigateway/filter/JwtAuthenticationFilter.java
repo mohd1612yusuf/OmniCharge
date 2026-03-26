@@ -25,8 +25,11 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
 	@Value("${jwt.secret}")
 	private String secret;
 
-	// FIX 2 — define routes that bypass JWT validation entirely
-	private static final List<String> PUBLIC_PATHS = List.of("/api/auth/login", "/api/auth/register");
+	// Routes that bypass JWT validation entirely (login & signup)
+	private static final List<String> PUBLIC_PATHS = List.of("/api/auth/signin", "/api/auth/signup");
+
+	// Routes restricted to ROLE_ADMIN only
+	private static final List<String> ADMIN_ONLY_PATHS = List.of("/api/operators");
 
 	public JwtAuthenticationFilter() {
 		super(Config.class);
@@ -42,7 +45,7 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
 
 			String path = exchange.getRequest().getURI().getPath();
 
-			// FIX 2 — skip filter for public routes
+			// Skip filter for public routes
 			boolean isPublic = PUBLIC_PATHS.stream().anyMatch(path::startsWith);
 			if (isPublic) {
 				return chain.filter(exchange);
@@ -61,15 +64,18 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
 			String token = authHeader.substring(7);
 
 			try {
-				// FIX 1 — use Keys.hmacShaKeyFor with explicit UTF-8 charset
 				SecretKey signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
 
 				Claims claims = Jwts.parserBuilder().setSigningKey(signingKey).build().parseClaimsJws(token).getBody();
 
 				String userId = claims.getSubject();
-
-				// FIX 3 — also propagate the role claim downstream
 				String role = claims.get("role", String.class);
+
+				// RBAC: Operator service routes are restricted to ROLE_ADMIN only
+				boolean isAdminRoute = ADMIN_ONLY_PATHS.stream().anyMatch(path::startsWith);
+				if (isAdminRoute && !"ROLE_ADMIN".equals(role)) {
+					return rejectForbidden(exchange, "Access denied: ROLE_ADMIN required to access operator management");
+				}
 
 				ServerWebExchange mutatedExchange = exchange.mutate().request(exchange.getRequest().mutate()
 						.header("loggedInUser", userId).header("X-User-Role", role != null ? role : "").build())
@@ -80,7 +86,6 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
 			} catch (ExpiredJwtException e) {
 				return rejectUnauthorized(exchange, "Token has expired");
 			} catch (JwtException e) {
-				// covers MalformedJwtException, SignatureException, etc.
 				return rejectUnauthorized(exchange, "Invalid token");
 			} catch (Exception e) {
 				return rejectUnauthorized(exchange, "Authentication failed");
@@ -88,11 +93,15 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
 		};
 	}
 
-	// FIX 4 — centralised 401 helper that sets WWW-Authenticate header
 	private reactor.core.publisher.Mono<Void> rejectUnauthorized(ServerWebExchange exchange, String reason) {
-
 		exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
 		exchange.getResponse().getHeaders().add(HttpHeaders.WWW_AUTHENTICATE, "Bearer error=\"" + reason + "\"");
+		return exchange.getResponse().setComplete();
+	}
+
+	private reactor.core.publisher.Mono<Void> rejectForbidden(ServerWebExchange exchange, String reason) {
+		exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+		exchange.getResponse().getHeaders().add("X-Error-Reason", reason);
 		return exchange.getResponse().setComplete();
 	}
 }
