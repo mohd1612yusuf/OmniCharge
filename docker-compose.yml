@@ -1,8 +1,14 @@
 version: '3.8'
 
 services:
+
+  # ─────────────────────────────────────────────────
+  # INFRASTRUCTURE
+  # ─────────────────────────────────────────────────
+
   postgres:
     image: postgres:15
+    container_name: omnicharge-postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: root
@@ -13,14 +19,181 @@ services:
       - omnicharge-network
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   rabbitmq:
     image: rabbitmq:3-management
+    container_name: omnicharge-rabbitmq
     ports:
-      - "5672:5672"      # AMQP protocol port
-      - "15672:15672"    # HTTP management UI
+      - "5672:5672"
+      - "15672:15672"
     networks:
       - omnicharge-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────────────
+  # SERVICE REGISTRY  (starts first)
+  # ─────────────────────────────────────────────────
+
+  eureka-server:
+    build:
+      context: .
+      dockerfile: eureka-server/Dockerfile
+    container_name: omnicharge-eureka
+    ports:
+      - "8761:8761"
+    networks:
+      - omnicharge-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8761/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────────────
+  # API GATEWAY  (starts after Eureka)
+  # ─────────────────────────────────────────────────
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    container_name: omnicharge-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      JWT_SECRET: omnichargeSecretKey12345678901234567890ABCDEFGHIJ
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - omnicharge-network
+
+  # ─────────────────────────────────────────────────
+  # MICROSERVICES
+  # ─────────────────────────────────────────────────
+
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    container_name: omnicharge-user
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/OmniCharge
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      OMNICHARGE_APP_JWTSECRET: omnichargeSecretKey12345678901234567890ABCDEFGHIJ
+      OMNICHARGE_APP_JWTEXPIRATIONMS: 86400000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - omnicharge-network
+
+  operator-service:
+    build:
+      context: .
+      dockerfile: operator-service/Dockerfile
+    container_name: omnicharge-operator
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/OmniCharge
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - omnicharge-network
+
+  recharge-service:
+    build:
+      context: .
+      dockerfile: recharge-service/Dockerfile
+    container_name: omnicharge-recharge
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/OmniCharge
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - omnicharge-network
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: payment-service/Dockerfile
+    container_name: omnicharge-payment
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/OmniCharge
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - omnicharge-network
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
+    container_name: omnicharge-notification
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - omnicharge-network
+
+# ─────────────────────────────────────────────────
+# NETWORKING AND VOLUMES
+# ─────────────────────────────────────────────────
 
 networks:
   omnicharge-network:
