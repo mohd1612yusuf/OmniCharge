@@ -17,6 +17,19 @@
         <spring-cloud.version>2023.0.1</spring-cloud.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
+
+        <!-- SonarQube Properties -->
+        <sonar.projectKey>omnicharge</sonar.projectKey>
+        <sonar.projectName>OmniCharge Platform</sonar.projectName>
+        <sonar.host.url>http://localhost:9000</sonar.host.url>
+        <sonar.login>admin</sonar.login>
+        <!-- The default password is "admin", but SonarQube forces a change on first login. 
+             If you change it, update this property or pass it via CLI -Dsonar.password=... -->
+        <sonar.password>admin</sonar.password>
+        <!-- To ensure JaCoCo coverage is picked up by SonarQube -->
+        <sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
+        <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
+        <sonar.coverage.jacoco.xmlReportPaths>${project.basedir}/target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
     </properties>
 
     <dependencyManagement>

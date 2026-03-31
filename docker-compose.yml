@@ -191,6 +191,25 @@ services:
     networks:
       - omnicharge-network
 
+  sonarqube:
+    image: sonarqube:10.4.1-community
+    container_name: omnicharge-sonarqube
+    ports:
+      - "9000:9000"
+    environment:
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+    networks:
+      - omnicharge-network
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/system/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
 # ─────────────────────────────────────────────────
 # NETWORKING AND VOLUMES
 # ─────────────────────────────────────────────────
@@ -201,3 +220,6 @@ networks:
 
 volumes:
   postgres-data:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:
