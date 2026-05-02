@@ -71,10 +71,10 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
 				String userId = claims.getSubject();
 				String role = claims.get("role", String.class);
 
-				// RBAC: Operator service routes are restricted to ROLE_ADMIN only
+				// RBAC: Operator service routes (POST/PUT/DELETE) are restricted to ROLE_ADMIN only
 				boolean isAdminRoute = ADMIN_ONLY_PATHS.stream().anyMatch(path::startsWith);
-				if (isAdminRoute && !"ROLE_ADMIN".equals(role)) {
-					return rejectForbidden(exchange, "Access denied: ROLE_ADMIN required to access operator management");
+				if (isAdminRoute && !"ROLE_ADMIN".equals(role) && !exchange.getRequest().getMethod().name().equals("GET")) {
+					return rejectForbidden(exchange, "Access denied: ROLE_ADMIN required to modify operators");
 				}
 
 				ServerWebExchange mutatedExchange = exchange.mutate().request(exchange.getRequest().mutate()

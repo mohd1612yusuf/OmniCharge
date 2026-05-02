@@ -53,6 +53,26 @@
         </dependencies>
     </dependencyManagement>
 
+    <dependencies>
+        <!-- Required for exposing metrics and traces in Spring Boot 3 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        
+        <!-- Distributed Tracing: Micrometer bridge for Brave -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-brave</artifactId>
+        </dependency>
+        
+        <!-- Zipkin Reporter: Sends the collected traces to the Zipkin server -->
+        <dependency>
+            <groupId>io.zipkin.reporter2</groupId>
+            <artifactId>zipkin-reporter-brave</artifactId>
+        </dependency>
+    </dependencies>
+
     <modules>
         <module>eureka-server</module>
         <module>api-gateway</module>

@@ -9,6 +9,7 @@ public class RechargeRequest {
     private String mobileNumber;
     private Long operatorId;
     private Long planId;
+    private Long userId;
 
     public RechargeRequest() {}
 
@@ -18,4 +19,6 @@ public class RechargeRequest {
     public void setOperatorId(Long operatorId) { this.operatorId = operatorId; }
     public Long getPlanId() { return planId; }
     public void setPlanId(Long planId) { this.planId = planId; }
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
 }

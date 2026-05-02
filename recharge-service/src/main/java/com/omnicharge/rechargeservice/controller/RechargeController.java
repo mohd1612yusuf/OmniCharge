@@ -24,8 +24,8 @@ public class RechargeController {
     @PostMapping("/initiate")
     public ResponseEntity<RechargeRecord> initiateRecharge(@RequestHeader(value = "loggedInUser", required = false) String username,
                                                            @Valid @RequestBody RechargeRequest request) {
-        Long mockUserId = 1L; // Mock mapping username to ID for simplicity
-        RechargeRecord record = rechargeService.initiateRecharge(mockUserId, request);
+        Long userId = request.getUserId();
+        RechargeRecord record = rechargeService.initiateRecharge(userId, request);
         return ResponseEntity.ok(record);
     }
 
