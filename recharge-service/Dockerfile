@@ -19,8 +19,8 @@ COPY recharge-service/src recharge-service/src/
 
 RUN mvn clean package -pl recharge-service -am -DskipTests
 
-# Stage 2: Lightweight runtime image
 FROM eclipse-temurin:21-jdk-alpine
 WORKDIR /app
-COPY --from=builder /app/recharge-service/target/*.jar app.jar
+COPY --from=builder /app/recharge-service/target /tmp/build
+RUN JARFILE=$(find /tmp/build -name "*.jar" ! -name "*plain*" | head -1) && mv "$JARFILE" app.jar && rm -rf /tmp/build
 ENTRYPOINT ["java", "-jar", "app.jar"]

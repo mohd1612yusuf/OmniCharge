@@ -19,8 +19,8 @@ COPY eureka-server/src eureka-server/src/
 
 RUN mvn clean package -pl eureka-server -am -DskipTests
 
-# Stage 2: Lightweight runtime image
 FROM eclipse-temurin:21-jdk-alpine
 WORKDIR /app
-COPY --from=builder /app/eureka-server/target/*.jar app.jar
+COPY --from=builder /app/eureka-server/target /tmp/build
+RUN JARFILE=$(find /tmp/build -name "*.jar" ! -name "*plain*" | head -1) && mv "$JARFILE" app.jar && rm -rf /tmp/build
 ENTRYPOINT ["java", "-jar", "app.jar"]

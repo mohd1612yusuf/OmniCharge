@@ -19,8 +19,8 @@ COPY operator-service/src operator-service/src/
 
 RUN mvn clean package -pl operator-service -am -DskipTests
 
-# Stage 2: Lightweight runtime image
 FROM eclipse-temurin:21-jdk-alpine
 WORKDIR /app
-COPY --from=builder /app/operator-service/target/*.jar app.jar
+COPY --from=builder /app/operator-service/target /tmp/build
+RUN JARFILE=$(find /tmp/build -name "*.jar" ! -name "*plain*" | head -1) && mv "$JARFILE" app.jar && rm -rf /tmp/build
 ENTRYPOINT ["java", "-jar", "app.jar"]
